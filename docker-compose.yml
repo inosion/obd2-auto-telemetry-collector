@@ -25,3 +25,8 @@ services:
     - /sys:/sys:rw
     privileged: true
     command: ["--device", "/dev/ttyUSB0" ]
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 3000:3000
+    user: "104"    
