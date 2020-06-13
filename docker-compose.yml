@@ -1,0 +1,27 @@
+version: '3.2'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+    - 9090:9090
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+    - auto-telemetry
+  auto-telemetry:
+    image: inosion/auto-telemetry
+    container_name: auto-telemetry
+    volumes:
+    # - ./bluetooth-rfcomm.conf:/etc/bluetooth/rfcomm.conf:ro
+    - ./auto-telemetry-collector.py:/usr/local/bin/auto-telemetry-collector.py:ro
+    ports:
+    - 8000:8000
+    volumes:
+    - /dev:/dev:rw
+    - /var:/var:rw
+    - /sys:/sys:rw
+    privileged: true
+    command: ["--device", "/dev/ttyUSB0" ]
