@@ -1,8 +1,10 @@
 FROM python:3
 
+ARG CAR_NAME=car-1
+
 RUN apt-get update && \
     apt-get install -y bluetooth bluez blueman
-RUN pip install obd prometheus_client docopt
+RUN pip install obd statsd docopt
 
 ADD auto-telemetry-collector.py /usr/local/bin/auto-telemetry-collector.py
 ADD startup.sh /startup.sh

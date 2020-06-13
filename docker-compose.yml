@@ -1,16 +1,27 @@
 version: '3.2'
 services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+  graphite:
+    image: graphiteapp/graphite-statsd
+    container_name: graphite
     ports:
-    - 9090:9090
-    command:
-    - --config.file=/etc/prometheus/prometheus.yml
-    volumes:
-    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - 8080:80
+    - 2003-2004:2003-2004
+    - 2023-2024:2023-2024
+    - 8125:8125/udp
+    - 8126:8126
     depends_on:
     - auto-telemetry
+    volumes:
+    - ./data/graphite-storage:/opt/graphite/storage
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - 3000:3000
+    user: "104"
+    volumes: 
+    - ./data/grafana-storage:/var/lib/grafana
+
   auto-telemetry:
     image: inosion/auto-telemetry
     container_name: auto-telemetry
@@ -24,9 +35,4 @@ services:
     - /var:/var:rw
     - /sys:/sys:rw
     privileged: true
-    command: ["--device", "/dev/ttyUSB0" ]
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - 3000:3000
-    user: "104"    
+    command: ["--device", "/dev/ttyUSB0" , "--carname", "peugeot308"]
