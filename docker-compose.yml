@@ -9,8 +9,6 @@ services:
     - 2023-2024:2023-2024
     - 8125:8125/udp
     - 8126:8126
-    depends_on:
-    - auto-telemetry
     volumes:
     - ./data/graphite-storage:/opt/graphite/storage
   grafana:
@@ -18,21 +16,27 @@ services:
     container_name: grafana
     ports:
       - 3000:3000
-    user: "104"
+#    user: "104"
     volumes: 
-    - ./data/grafana-storage:/var/lib/grafana
+    - ./data/grafana-storage:/var/lib/grafana:rw
 
-  auto-telemetry:
+  auto-telemetry-collector:
     image: inosion/auto-telemetry
-    container_name: auto-telemetry
+    container_name: auto-telemetry-collector
     volumes:
-    # - ./bluetooth-rfcomm.conf:/etc/bluetooth/rfcomm.conf:ro
-    - ./auto-telemetry-collector.py:/usr/local/bin/auto-telemetry-collector.py:ro
+      # - ./bluetooth-rfcomm.conf:/etc/bluetooth/rfcomm.conf:ro
+      - ./auto-telemetry-collector.py:/usr/local/bin/auto-telemetry-collector.py:ro
     ports:
-    - 8000:8000
+     - 8000:8000
     volumes:
-    - /dev:/dev:rw
-    - /var:/var:rw
-    - /sys:/sys:rw
+      - ./:/host:ro
+      - /dev:/dev:rw
+      - /var:/var:rw
+      - /sys:/sys:rw
     privileged: true
-    command: ["--device", "/dev/ttyUSB0" , "--carname", "peugeot308"]
+    working_dir: /host
+    environment:
+      - ATC_CONFIG=/etc/auto-telemetry-collector/default-auto-telemetry-config.yaml    
+    command: ["monitor", "--device", "/dev/ttyUSB0" , "--config", "${ATC_CONFIG}"]
+    depends_on:
+      - grafana

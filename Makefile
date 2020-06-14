@@ -7,3 +7,7 @@ $(IMAGE):
 
 .PHONY: all
 all: $(IMAGE)
+
+prepare:
+	mkdir -p data/grafana-storage
+	sudo chown -R 472:472 data/grafana-storage
