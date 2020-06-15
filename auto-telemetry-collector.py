@@ -37,8 +37,9 @@ def inspect(device):
     supported_commands = []
     for c in connection.supported_commands:
         # embedded the YAML entries - and a comment
-        supported_commands.append({ "name": f"- {c.name}", "desc": f"# {c.desc}", "ecu": c.ecu })
-
+        # supported_commands.append({ "name": f"- {c.name}", "desc": f"# {c.desc}", "ecu": c.ecu })
+        supported_commands.append([ f"- {c.name}", f"# {c.desc}", c.ecu ])
+        
     commands = columnar(supported_commands, headers=None, no_borders=True)
 
     print(commands)

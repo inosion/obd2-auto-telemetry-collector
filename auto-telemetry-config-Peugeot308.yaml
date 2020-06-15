@@ -2,10 +2,10 @@ name: peugeot308
 codes-to-monitor:
     - LONG_FUEL_TRIM_1
     # - FUEL_STATUS
-    # - ENGINE_LOAD
+    - ENGINE_LOAD
     # - OBD_COMPLIANCE
     # - DTC_DISTANCE_W_MIL
-    # - TIMING_ADVANCE
+    - TIMING_ADVANCE
     # - DTC_PIDS_C
     # - DISTANCE_W_MIL
     # - DTC_O2_S1_WR_CURRENT
@@ -13,17 +13,17 @@ codes-to-monitor:
     # - O2_SENSORS
     - THROTTLE_POS_B
     # - PIDS_B
-    # - O2_S1_WR_CURRENT
+    - O2_S1_WR_CURRENT
     # - MONITOR_MISFIRE_CYLINDER_3
     # - DTC_RPM
     # - MIDS_B
     - INTAKE_PRESSURE
     # - PIDS_A
     # - MONITOR_MISFIRE_CYLINDER_1
-    # - MONITOR_O2_HEATER_B1S2
+    - MONITOR_O2_HEATER_B1S2
     # - DTC_FUEL_STATUS
     # - ELM_VOLTAGE
-    # - MONITOR_O2_B1S2
+    - MONITOR_O2_B1S2
     # - DTC_O2_B1S2
     # - MIDS_D
     # - DTC_SHORT_FUEL_TRIM_1
@@ -33,8 +33,8 @@ codes-to-monitor:
     - FUEL_RAIL_PRESSURE_DIRECT
     # - ELM_VERSION
     - COOLANT_TEMP
-    # - MONITOR_CATALYST_B1
-    # - MONITOR_O2_B1S1
+    - MONITOR_CATALYST_B1
+    - MONITOR_O2_B1S1
     # - MIDS_E
     # - DTC_TIMING_ADVANCE
     # - DTC_INTAKE_PRESSURE
@@ -46,7 +46,7 @@ codes-to-monitor:
     # - DTC_OBD_COMPLIANCE
     - INTAKE_TEMP
     # - DTC_PIDS_B
-    # - O2_B1S2
+    - O2_B1S2
     # - DTC_THROTTLE_POS_B
     - RPM
     # - MONITOR_MISFIRE_CYLINDER_4
@@ -54,7 +54,7 @@ codes-to-monitor:
     - SPEED
     # - DTC_SPEED
     # - DTC_INTAKE_TEMP
-    # - MONITOR_O2_HEATER_B1S1
+    - MONITOR_O2_HEATER_B1S1
     # - DTC_THROTTLE_POS
     # - MIDS_C
     # - DTC_FUEL_RAIL_PRESSURE_DIRECT

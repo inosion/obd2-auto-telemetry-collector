@@ -1,0 +1,1 @@
+docker run -ti --rm --privileged -v /dev:/dev inosion/auto-telemetry inspect --device /dev/ttyUSB0
