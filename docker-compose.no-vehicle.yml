@@ -1,0 +1,8 @@
+version: '3.2'
+services:
+
+  auto-telemetry-collector:
+    volumes:
+      - ./:/host:ro
+      - ./auto-telemetry-collector.py:/usr/local/bin/auto-telemetry-collector.py
+    command: ["monitor", "--device", "/dev/ttyUSB0" , "--config", "${ATC_CONFIG}", "--noconnect"]

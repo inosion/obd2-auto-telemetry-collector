@@ -1,22 +1,28 @@
 version: '3.2'
 services:
-  graphite:
-    image: graphiteapp/graphite-statsd
-    container_name: graphite
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
     ports:
-    - 8080:80
-    - 2003-2004:2003-2004
-    - 2023-2024:2023-2024
-    - 8125:8125/udp
-    - 8126:8126
+    - 8086:8086
+    - 8089:8089/udp
     volumes:
-    - ./data/graphite-storage:/opt/graphite/storage
+    - ./data/influxdb-storage:/var/lib/influxdb:rw
+    - ./config/influxdb.conf:/etc/influxdb/influxdb.conf
+    # environment: 
+    #   INFLUXDB_DB: auto-telemetry
+    #   # INFLUXDB_ADMIN: admin_atc
+    #   # INFLUXDB_ADMIN_PASSWORD: adminPassword123
+    #   INFLUXDB_USER: atc
+    #   INFLUXDB_USER_PASSWORD: atc
+    #   INFLUXDB_HTTP_AUTH_ENABLED: "true"
+    command: ["-config", "/etc/influxdb/influxdb.conf"]
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - 3000:3000
-#    user: "104"
     volumes: 
     - ./data/grafana-storage:/var/lib/grafana:rw
 
@@ -27,7 +33,7 @@ services:
       # - ./bluetooth-rfcomm.conf:/etc/bluetooth/rfcomm.conf:ro
       - ./auto-telemetry-collector.py:/usr/local/bin/auto-telemetry-collector.py:ro
     ports:
-     - 8000:8000
+     - 5000:5000
     volumes:
       - ./:/host:ro
       - /dev:/dev:rw

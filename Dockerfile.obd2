@@ -4,9 +4,10 @@ ARG CAR_NAME=car-1
 
 RUN apt-get update && \
     apt-get install -y bluetooth bluez blueman
-RUN pip install obd statsd docopt pyyaml columnar
+ADD requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 ADD auto-telemetry-collector.py        /usr/local/bin/auto-telemetry-collector.py
-ADD default-auto-telemetry-config.yaml /etc/auto-telemetry-collector/default-auto-telemetry-config.yaml 
+ADD config/default-auto-telemetry-config.yaml /etc/auto-telemetry-collector/default-auto-telemetry-config.yaml 
 
 ENTRYPOINT [ "/usr/local/bin/auto-telemetry-collector.py" ]

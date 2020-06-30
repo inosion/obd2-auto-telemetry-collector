@@ -4,7 +4,7 @@
 Auto Telemetry Collector
 
 Usage:
-  auto-telemetry-collector.py monitor --device <device> --config <config_yaml>
+  auto-telemetry-collector.py monitor --device <device> --config <config_yaml> [ --noconnect ]
   auto-telemetry-collector.py inspect --device <device> 
   auto-telemetry-collector.py clear --device <device> 
   auto-telemetry-collector.py -h | --help
@@ -22,12 +22,46 @@ import sys
 import yaml
 import os
 import time
-import statsd
 import obd
 import pint
+import time
+import random
+
+from threading import Thread
+from flask import Flask, json
+import socket
+
 from columnar import columnar
 from datetime import datetime
 
+#
+# UDP Socket for influx
+#
+
+udp = socket.socket(socket.AF_INET, # Internet
+                     socket.SOCK_DGRAM) # UDP
+
+#
+# Webserver for the grafana back to the monitor
+#
+api = Flask(__name__)
+
+def api_daemon():
+    api.run(host="0.0.0.0", port=5000)
+
+@api.route('/getcodes', methods=['GET'])
+def get_errorcodes():
+    print("Request for DTC fault codes")
+    return "OK\n"
+
+def start_webserver():
+    t = Thread(target=api_daemon)
+    t.daemon = True
+    t.start()
+
+#
+# OBD2 type stuff
+#
 def inspect(device):
     connection = obd.OBD(device) # auto connect
 
@@ -55,11 +89,11 @@ def clear_dtcs(device):
     response = connection.query(obd.commands.CLEAR_DTC)
     print(response.value)
 
-def connect_and_watch(device, config):
+def connect_and_watch(device, monitored_name, config):
     connection = obd.Async(device) # auto connect
     for c in connection.supported_commands:
         if c.name in config["codes-to-monitor"]:
-            connection.watch(eval(f"obd.commands.{c.name}"), callback=fn_collect(c))
+            connection.watch(eval(f"obd.commands.{c.name}"), callback=fn_collect(monitored_name, c))
             print(f"+ Added watch for {c.name} from {c.ecu}")
         else:
             print(f"+ Ignored watch for {c.name}")
@@ -68,7 +102,7 @@ def connect_and_watch(device, config):
     return connection
 
 
-def fn_collect(code):
+def fn_collect(monitored_name, code):
 
     def collect_generic(x):
         #print(rpm)
@@ -77,7 +111,7 @@ def fn_collect(code):
 
             try:
                 if hasattr(x.value, 'magnitude'):
-                  cstatsd.gauge(f"{code.name}_{x.value.units}", x.value.magnitude)   # Set to a given value
+                  send_data({ "vehicle": monitored_name, "ecu": code.ecu, "units": x.value.units}, code.name, x.value.magnitude)
 
             except AttributeError:
                 print(f"{code.name} has no value.magnitude {type(x.value)} {code}")
@@ -85,6 +119,21 @@ def fn_collect(code):
                 print(f"{code.name} - {str(e)} - failed send of stats - [{code.desc}]")
 
     return collect_generic
+
+def send_data(name, tags, measure, val): 
+
+  event_ms = int(round(time.time() * 1000))
+  tag_str = ",".join(["=".join([k, str(v)]) for k, v in tags.items()])
+  data_msg = f"{name},{tag_str} {measure}={val} {event_ms}\n"
+  print(data_msg, flush=True, end="")
+
+  udp.sendto(str.encode(data_msg), (socket.gethostbyname("influxdb"), 8089))
+
+
+def debug_send():
+    x = random.randint(0,1000)
+    send_data("some_metric", { "foo": 99, "booboo": "ding" }, "testy_ticks", random.randint(0,1000))
+    print(f"send. tt {x}", flush=True)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__, version='1.0.2')
@@ -101,6 +150,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if arguments["monitor"]:
+
+        #
+        # collect the config
+        
         try:
             config_yaml = open(arguments["--config"])
             config = yaml.load(config_yaml, Loader=yaml.FullLoader)
@@ -108,23 +161,37 @@ if __name__ == "__main__":
             print("Failed to load the config file [" + arguments["--config"] + "]")
             sys.exit(1)
 
+        #
+        # set the name we will use for the stats
+
         if "name" in config:
             monitored_name = config["name"] # typically the car name
         else:
             monitored_name = "car-" + datetime.now().strftime("%Y-%m-%d-%H%M%S")
         
-        print(f"Monitoring OBD2: {monitored_name}", flush=True)
+        #
+        # start the API server (from grafan back to the "OBD2 module")
 
-        cstatsd = statsd.StatsClient('graphite', 8125, prefix=monitored_name) #+arguments["--carname"])
+        start_webserver()
 
-        conn = connect_and_watch(device, config)
+        if arguments["--noconnect"]:
+            # we won't connect to the car
+            print(f"No Monitoring OBD2 monitoring: {monitored_name}", flush=True)
+            while True:
+                debug_send()
+                time.sleep(.2)
+        else:
+            print(f"Monitoring OBD2: {monitored_name}", flush=True)
 
-        while True:
-            status = conn.status()
-            print(f"{device} is {status}", flush=True)
+            conn = connect_and_watch(device, monitored_name, config)
 
-            if status == "Not Connected":
-                conn = connect_and_watch(device, config)
-            
-            print("{} is {}".format(device, status), flush=True)
-            time.sleep(10)
+            while True:
+                status = conn.status()
+                print(f"{device} is {status}", flush=True)
+
+                if status == "Not Connected":
+                    conn = connect_and_watch(device, monitored_name,  config)
+                
+                print("{} is {}".format(device, status), flush=True)
+                time.sleep(10)
+

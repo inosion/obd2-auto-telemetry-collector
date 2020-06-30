@@ -173,3 +173,31 @@ P1340 -
 - fix known issues
 - Automatically collect and have a graph for the telemetry supported by the car. 
 - show a table of all live data
+
+## Notes
+
+
+In case you need to reset the grafana password.
+```
+ docker exec -ti grafana grafana-cli admin reset-admin-password --homepath /usr/share/grafana admin
+```
+
+## InfluxdB
+
+```
+{
+  "data": "",
+  "status": 502,
+  "statusText": "Bad Gateway",
+  "xhrStatus": "complete",
+  "request": {
+    "method": "GET",
+    "url": "api/datasources/proxy/1/metrics/find",
+    "params": {
+      "query": "stats.gauges.*",
+      "from": 1593509871,
+      "until": 1593510891
+    }
+  }
+}
+```
