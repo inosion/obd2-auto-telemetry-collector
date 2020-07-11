@@ -29,6 +29,7 @@ import random
 
 from threading import Thread
 from flask import Flask, json
+from flask_cors import CORS
 import socket
 
 from columnar import columnar
@@ -45,14 +46,50 @@ udp = socket.socket(socket.AF_INET, # Internet
 # Webserver for the grafana back to the monitor
 #
 api = Flask(__name__)
+CORS(api, resources={r"/api/*": {"origins": "*"}})
+connection = None
 
 def api_daemon():
     api.run(host="0.0.0.0", port=5000)
 
-@api.route('/getcodes', methods=['GET'])
-def get_errorcodes():
+@api.route('/api/getcodes', methods=['GET'])
+def api_get_errorcodes():
     print("Request for DTC fault codes")
-    return "OK\n"
+    if connection is not None:
+        return {
+            "status": "connected",
+            "codes" : get_dtc_codes(connection)
+        }
+    else:
+        return {
+            "status": "not connected to a vehicle"
+        }
+
+@api.route('/api/clearcodes', methods=['GET'])
+def api_clear_codes():
+    print("Request to clear DTC fault codes")
+    if connection is not None:
+        return {
+            "status": "connected",
+            "response" : clear_dtcs(connection)
+        }
+    else:
+        return {
+            "status": "not connected to a vehicle"
+        }
+
+@api.route('/api/getvehicleinfo', methods=['GET'])
+def api_get_vehicle_info():
+    print("Request for vehicle info")
+    if connection is not None:
+        return {
+            "status": "connected",
+            "supported_commands" : get_supported_commands(connection)
+        }
+    else:
+        return {
+            "status": "not connected to a vehicle"
+        }
 
 def start_webserver():
     t = Thread(target=api_daemon)
@@ -62,8 +99,7 @@ def start_webserver():
 #
 # OBD2 type stuff
 #
-def inspect(device):
-    connection = obd.OBD(device) # auto connect
+def inspect(connection):
 
     # we are going to output the supported commands in YAML format
     # so they can go back into the config file.
@@ -77,17 +113,40 @@ def inspect(device):
     commands = columnar(supported_commands, headers=None, no_borders=True)
 
     print(commands)
-
-    print("------ current fault codes -----")
     
-    response = connection.query(obd.commands.GET_DTC)
-    for e in response.value:
-        print(f"{e[0]} - {e[1]}")
+    print("------ current fault codes -----")
+    print(yaml.dump(get_dtc_codes(connection)))
 
-def clear_dtcs(device):
-    connection = obd.OBD(device) # auto connect
+def get_supported_commands(connection):
+    supported_commands = []
+    for c in connection.supported_commands:
+        # embedded the YAML entries - and a comment
+        # supported_commands.append({ "name": f"- {c.name}", "desc": f"# {c.desc}", "ecu": c.ecu })
+        supported_commands.append(
+            { 
+                "name": c.name,
+                "desc": c.desc,
+                "ecu_id": c.ecu
+            }
+        )
+    return supported_commands
+    
+def get_dtc_codes(connection):
+    response = connection.query(obd.commands.GET_DTC)
+    codes = []
+    for e in response.value:
+        codes.append(
+            { 
+                "code": e[0],
+                "name": e[1]
+            }
+        )
+    return codes
+
+
+def clear_dtcs(connection):
     response = connection.query(obd.commands.CLEAR_DTC)
-    print(response.value)
+    return response.value
 
 def connect_and_watch(device, monitored_name, config):
     connection = obd.Async(device) # auto connect
@@ -99,7 +158,6 @@ def connect_and_watch(device, monitored_name, config):
             print(f"+ Ignored watch for {c.name}")
     # connection.watch(obd.commands.FUEL_RAIL_PRESSURE_DIRECT, callback=collect_FUEL_RAIL_PRESSURE_DIRECT)
     connection.start() # start the async update loop
-    return connection
 
 
 def fn_collect(monitored_name, code):
@@ -111,7 +169,7 @@ def fn_collect(monitored_name, code):
 
             try:
                 if hasattr(x.value, 'magnitude'):
-                  send_data({ "vehicle": monitored_name, "ecu": code.ecu, "units": x.value.units}, code.name, x.value.magnitude)
+                  send_data(code.name, { "vehicle": monitored_name, "ecu": code.ecu}, x.value.units, x.value.magnitude)
 
             except AttributeError:
                 print(f"{code.name} has no value.magnitude {type(x.value)} {code}")
@@ -142,11 +200,13 @@ if __name__ == "__main__":
     device = arguments["--device"]
 
     if arguments["inspect"]:
-        inspect(device)
+        connection = obd.OBD(device) # auto connect
+        inspect(connection)
         sys.exit(0)
 
     if arguments["clear"]:
-        clear_dtcs(device)
+        connection = obd.OBD(device) # auto connect
+        print(clear_dtcs(connection))
         sys.exit(0)
 
     if arguments["monitor"]:
@@ -179,18 +239,18 @@ if __name__ == "__main__":
             print(f"No Monitoring OBD2 monitoring: {monitored_name}", flush=True)
             while True:
                 debug_send()
-                time.sleep(.2)
+                time.sleep(10)
         else:
             print(f"Monitoring OBD2: {monitored_name}", flush=True)
 
-            conn = connect_and_watch(device, monitored_name, config)
+            connect_and_watch(device, monitored_name, config)
 
             while True:
                 status = conn.status()
                 print(f"{device} is {status}", flush=True)
 
                 if status == "Not Connected":
-                    conn = connect_and_watch(device, monitored_name,  config)
+                    connect_and_watch(device, monitored_name,  config)
                 
                 print("{} is {}".format(device, status), flush=True)
                 time.sleep(10)
