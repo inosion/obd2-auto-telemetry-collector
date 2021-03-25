@@ -9,7 +9,7 @@ MarkupSafe==1.1.1
 obd==0.7.1
 Pint==0.7.2
 pyserial==3.4
-PyYAML==5.3.1
+PyYAML==5.4
 toolz==0.10.0
 wcwidth==0.2.4
 Werkzeug==1.0.1
